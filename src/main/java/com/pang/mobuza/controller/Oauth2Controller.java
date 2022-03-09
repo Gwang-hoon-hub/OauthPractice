@@ -7,10 +7,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.Principal;
+
 @RestController
 @RequiredArgsConstructor
 public class Oauth2Controller {
     private final Oauth2MemberService memberService;
+
 
     @GetMapping("/user/kakao/callback")
     public String kakaoLogin(@RequestParam String code) throws JsonProcessingException {
@@ -19,7 +22,8 @@ public class Oauth2Controller {
     }
 
     @GetMapping("/user")
-    public String rest(){
+    public String rest(Principal principal){
+
         return "rest test";
     }
 

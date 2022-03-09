@@ -4,17 +4,21 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pang.mobuza.controller.KakaoUserInfoDto;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import com.pang.mobuza.dto.RequestRegisterDto;
+import com.pang.mobuza.model.Member;
+import com.pang.mobuza.repository.MemberRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+@RequiredArgsConstructor
 @Service
 public class Oauth2MemberService {
+
+    private final MemberRepository memberRepository;
 
     public void kakaoLogin(String code) throws JsonProcessingException {
         // 1. "인가 코드"로 "액세스 토큰" 요청
@@ -22,6 +26,16 @@ public class Oauth2MemberService {
         // 2. 토큰으로 카카오 API 호출
         KakaoUserInfoDto kakaoUserInfoDto = getKakaoUserInfo(accessToken);
         System.out.println("kakaoUserInfoDto = " + kakaoUserInfoDto.toString());
+
+        RequestRegisterDto dto = RequestRegisterDto.builder()
+                .kakaoId(kakaoUserInfoDto.getId())
+                .nickname(kakaoUserInfoDto.getNickname())
+                .email(kakaoUserInfoDto.getEmail())
+                .build();
+
+        System.out.println(register(dto));
+
+
     }
 
     public String getAccessToken(String code) throws JsonProcessingException {
@@ -51,9 +65,7 @@ public class Oauth2MemberService {
         String responseBody = response.getBody();
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode jsonNode = objectMapper.readTree(responseBody);
-        System.out.println("4");
         return jsonNode.get("access_token").asText();
-
     }
 
     public KakaoUserInfoDto getKakaoUserInfo(String accessToken) throws JsonProcessingException {
@@ -72,16 +84,30 @@ public class Oauth2MemberService {
                 String.class
         );
 
+        System.out.println("=========================================");
+        System.out.println("acceessToken : " + accessToken);
+        System.out.println("=========================================");
+
         String responseBody = response.getBody();
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode jsonNode = objectMapper.readTree(responseBody);
         Long id = jsonNode.get("id").asLong();
         String nickname = jsonNode.get("properties")
                 .get("nickname").asText();
+//        String imgurl = jsonNode.get("properties")
+//                .get("thumbnail_image").asText();
         String email = jsonNode.get("kakao_account")
                 .get("email").asText();
 
-        System.out.println("카카오 사용자 정보: " + id + ", " + nickname + ", " + email);
+
+        System.out.println("카카오 사용자 정보: " + id + ", " + nickname + ", " + email + " response : " + response);
         return new KakaoUserInfoDto(id, nickname, email);
     }
+
+    public ResponseEntity register(RequestRegisterDto dto){
+        Member member = new Member();
+        memberRepository.save(member.fromDto(dto));
+        return new ResponseEntity("회원가입 완료", null, HttpStatus.OK);
+    }
+
 }
