@@ -18,22 +18,24 @@ public class Member {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long kakaoId;
+    private String password;
+
+    private String kakaoId;
 
     private String nickname;
 
     private String email;
 
     @Builder
-    public Member(Long kakaoId, String nickname, String email) {
+    public Member(String kakaoId, String nickname, String email) {
         this.kakaoId = kakaoId;
         this.nickname = nickname;
         this.email = email;
     }
 
-    public Member fromDto(RequestRegisterDto dto){
+    public Member fromDto(RequestRegisterDto dto, String kakaoId) {
         return new Member().builder()
-                .kakaoId(dto.getKakaoId())
+                .kakaoId(kakaoId)
                 .nickname(dto.getNickname())
                 .email(dto.getEmail())
                 .build();

@@ -18,12 +18,4 @@ public class RequestRegisterDto {
     private String nickname;
     private String email;
 
-    public Member fromDto(RequestRegisterDto dto){
-        return new Member().builder()
-                .kakaoId(dto.kakaoId)
-                .nickname(dto.nickname)
-                .email(dto.email)
-                .build();
-    }
-
 }

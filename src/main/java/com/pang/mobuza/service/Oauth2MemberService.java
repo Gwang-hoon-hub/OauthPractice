@@ -20,9 +20,10 @@ public class Oauth2MemberService {
 
     private final MemberRepository memberRepository;
 
-    public void kakaoLogin(String code) throws JsonProcessingException {
+    public ResponseEntity kakaoLogin(String code) throws JsonProcessingException {
         // 1. "인가 코드"로 "액세스 토큰" 요청
         String accessToken = getAccessToken(code);
+
         // 2. 토큰으로 카카오 API 호출
         KakaoUserInfoDto kakaoUserInfoDto = getKakaoUserInfo(accessToken);
         System.out.println("kakaoUserInfoDto = " + kakaoUserInfoDto.toString());
@@ -32,10 +33,14 @@ public class Oauth2MemberService {
                 .nickname(kakaoUserInfoDto.getNickname())
                 .email(kakaoUserInfoDto.getEmail())
                 .build();
-
         System.out.println(register(dto));
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Access-Token", accessToken);
 
+        System.out.println("헤더====================");
+        System.out.println(headers);
+        return new ResponseEntity("어세스토큰", headers, HttpStatus.OK);
     }
 
     public String getAccessToken(String code) throws JsonProcessingException {
@@ -47,9 +52,11 @@ public class Oauth2MemberService {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("grant_type", "authorization_code");
         body.add("client_id", "f367d5c13479608400bba9be2af87fc6");
-        body.add("redirect_uri", "http://localhost:8080/user/kakao/callback");
+//        body.add("redirect_uri", "http://localhost:8080/user/kakao/callback");
+        body.add("redirect_uri", "http://moabuza.s3-website.ap-northeast-2.amazonaws.com/callback");
         body.add("code", code);
         body.add("client_secret", "X8m672khDWbTiYJlRBNwNGtH8K3k7HVE");
+
 // HTTP 요청 보내기
         HttpEntity<MultiValueMap<String, String>> kakaoTokenRequest =
                 new HttpEntity<>(body, headers);
@@ -106,7 +113,9 @@ public class Oauth2MemberService {
 
     public ResponseEntity register(RequestRegisterDto dto){
         Member member = new Member();
-        memberRepository.save(member.fromDto(dto));
+        String kakaoId = dto.getKakaoId().toString();
+
+        memberRepository.save(member.fromDto(dto, kakaoId));
         return new ResponseEntity("회원가입 완료", null, HttpStatus.OK);
     }
 
