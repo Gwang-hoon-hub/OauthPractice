@@ -1,4 +1,5 @@
 package com.pang.mobuza.model;
 
-public enum He {
+public enum HeroNames {
+    TOTO, PUPU, RARA
 }

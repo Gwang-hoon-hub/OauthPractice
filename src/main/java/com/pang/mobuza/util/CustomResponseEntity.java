@@ -1,6 +1,9 @@
-package com.pang.magazine.util;
+package com.pang.mobuza.util;
 
-import lombok.*;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -11,11 +14,11 @@ import java.nio.charset.Charset;
 @NoArgsConstructor
 @ToString
 @Data
-public class CustomResponseEntity{
+public class CustomResponseEntity {
     private HttpStatus code;
     private String message;
     private Object data;
-    private String accessToken;
+    private String authorization;
 
 //    @Builder
 //    public CustomResponseEntity(HttpStatus code, String message, Object data) {
@@ -25,8 +28,8 @@ public class CustomResponseEntity{
 //    }
 
     @Builder
-    public CustomResponseEntity(String accessToken, HttpStatus code, String message, Object data) {
-        this.accessToken = accessToken;
+    public CustomResponseEntity(String authorization, HttpStatus code, String message, Object data) {
+        this.authorization = authorization;
         this.code = code;
         this.message = message;
         this.data = data;
@@ -39,7 +42,7 @@ public class CustomResponseEntity{
                 .code(this.code)
                 .message(this.message)
                 .data(this.data)
-                .accessToken(this.accessToken)
+                .authorization(this.authorization)
                 .build();
         return new ResponseEntity(response, headers, this.code);
     }

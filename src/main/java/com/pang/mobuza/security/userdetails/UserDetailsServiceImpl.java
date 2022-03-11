@@ -17,10 +17,10 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     private final MemberRepository memberRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String kakaoId) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
 
         Member member = Optional
-                .ofNullable(memberRepository.findByKakaoId(kakaoId))
+                .ofNullable(memberRepository.findByEmail(email))
                 .orElseThrow(() -> new UsernameNotFoundException("해당 유저 없음"));
 
         return new UserDetailsImpl(member);

@@ -33,7 +33,7 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public String getUsername() {
-        return member.getKakaoId().toString();
+        return member.getEmail();
     }
     
     // 커스텀 한 : 카카오 아이디 갖고오는 메소드
