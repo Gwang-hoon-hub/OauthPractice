@@ -23,21 +23,17 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class CustomAuthenticationFilter extends GenericFilterBean {
 
-
     // 권한 검증
     private final JwtTokenProvider jwtProvider;
     private final RedisTemplate redisTemplate;
-
     private static final Logger logger = LoggerFactory.getLogger(CustomAuthenticationFilter.class);
-
-    public static final String AUTHORIZATION_HEADER = "authorization";
 
 //    public CustomAuthenticationFilter(JwtTokenProvider jwtProvider, RedisTemplate redisTemplate) {
 //        this.jwtProvider = jwtProvider;
 //        this.redisTemplate = redisTemplate;
 //    }
 
-    // jwt 토큰의 인증정보를 SecurityContext 에 담는 역할 - doFilter
+    // jwt 토큰의 인증정보를 SecurityContext에 담는 역할 - doFilter
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
             throws IOException, ServletException {

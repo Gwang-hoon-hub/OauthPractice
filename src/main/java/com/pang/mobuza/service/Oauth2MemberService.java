@@ -62,13 +62,11 @@ public class Oauth2MemberService {
         redisTemplate.opsForValue()
                 .set("RT:" + kakaoUserInfoDto.getEmail(), refresh, jwtTokenProvider.getExpiration(refresh), TimeUnit.MILLISECONDS);
 
-
 //        Long exp = jwtTokenProvider.getExpiration(refresh);
         RefreshToken refreshToken = RefreshToken.builder()
                 .token(refresh)
                 .email(kakaoUserInfoDto.getEmail())
                 .build();
-
 
         refreshTokenRepository.save(refreshToken);
 
