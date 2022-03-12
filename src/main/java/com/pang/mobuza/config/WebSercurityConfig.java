@@ -42,6 +42,7 @@ public class WebSercurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers(HttpMethod.GET, "/user/kakao/callback").permitAll()
 //                .antMatchers("/h2-console/*","favicon.ico").permitAll()
                 .antMatchers("/index.html").permitAll()
+                .antMatchers(HttpMethod.GET, "/api/reissue").permitAll()
                 .anyRequest().authenticated();
 
         http    .addFilterBefore(new CustomAuthenticationFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class);

@@ -4,36 +4,40 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pang.mobuza.controller.KakaoUserInfoDto;
-import com.pang.mobuza.dto.RequestMemberUpdateDto;
-import com.pang.mobuza.dto.RequestRegisterDto;
+import com.pang.mobuza.dto.*;
 import com.pang.mobuza.model.Member;
+import com.pang.mobuza.model.RefreshToken;
 import com.pang.mobuza.repository.MemberRepository;
+import com.pang.mobuza.repository.RefreshTokenRepository;
 import com.pang.mobuza.security.filter.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import javax.transaction.Transactional;
 import java.util.Optional;
 import java.util.UUID;
 
 @RequiredArgsConstructor
 @Service
 @Slf4j
+@Transactional
 public class Oauth2MemberService {
-
     private final JwtTokenProvider jwtTokenProvider;
-
+    private final RefreshTokenRepository refreshTokenRepository;
     private final MemberRepository memberRepository;
 
-    public String kakaoLogin(String code) throws JsonProcessingException {
+    @Transactional
+    public ResponseTokenDto kakaoLogin(String code) throws JsonProcessingException {
         // 1. "인가 코드"로 "액세스 토큰" 요청
         String accessToken = getAccessToken(code);
-        log.info(accessToken);
+
         // 2. 토큰으로 카카오 API 호출
         KakaoUserInfoDto kakaoUserInfoDto = getKakaoUserInfo(accessToken);
         System.out.println("kakaoUserInfoDto = " + kakaoUserInfoDto.toString());
@@ -45,9 +49,24 @@ public class Oauth2MemberService {
                 .build();
 
         System.out.println(register(dto));
+        // access, refresh 둘다 만들어줌
+        String access = jwtTokenProvider.createAccessToken(kakaoUserInfoDto.getEmail());
+        String refresh = jwtTokenProvider.createRefreshToken(kakaoUserInfoDto.getEmail());
+        System.out.println(" 서비스단 토큰 발급 : " + access + "  ====  " + refresh);
 
-        return jwtTokenProvider.createToken(kakaoUserInfoDto.getEmail());
-//        return accessToken;
+//        Long exp = jwtTokenProvider.getExpiration(refresh);
+        RefreshToken refreshToken = RefreshToken.builder()
+                .token(refresh)
+                .email(kakaoUserInfoDto.getEmail())
+                .build();
+
+
+        refreshTokenRepository.save(refreshToken);
+
+        return ResponseTokenDto.builder()
+                .accessToken(access)
+                .refreshToken(refresh)
+                .build();
     }
 
     public String getAccessToken(String code) throws JsonProcessingException {
@@ -126,22 +145,58 @@ public class Oauth2MemberService {
             // boolean 으로 : 회원가입, 로그인 인지를 알려주고
             // FE에서 온보딩 API를 호출한다.
             // 캐릭터 설정, 닉네임 설정 => PATCH API를 날려서 유저가 설정한 값으로 DEFAULRT 값을 수정하도록 한다.
+
         }
         // 기존 회원이면 그냥 로그인완료 메세지
         return new ResponseEntity("로그인 완료", HttpStatus.OK);
-
     }
 
     // todo : 회원이 회원이 캐릭터랑 닉네임 설정한 경우
+    @Transactional
     public ResponseEntity updateMemberInfo(RequestMemberUpdateDto dto, String email){
         Member byEmail = memberRepository.findByEmail(email);
-
         if(byEmail == null){
             throw new UsernameNotFoundException("유저를 찾을 수 없습니다.");
         }
-        System.out.println(byEmail.getId());
-        byEmail.updateInfo(dto);
+        Member m2 = byEmail.updateInfo(dto);
+//        memberRepository.save(m2);
         return ResponseEntity.ok().body("캐릭터, 닉네임 설정 완료");
     }
+
+    @Transactional
+    public TokenDto reissue(RequestTokenDto dto) {
+        // 1. Refresh Token 검증
+        if (!jwtTokenProvider.validateToken(dto.getRefresh())) {
+            throw new RuntimeException("Refresh Token 이 유효하지 않습니다.");
+        }
+        System.out.println("리이슈 마지막 부분1");
+        // 2. Access Token 에서 Member ID 가져오기
+        Authentication authentication = jwtTokenProvider.getAuthentication(dto.getAccess());
+        System.out.println(authentication.getName());
+        // 3. 저장소에서 Member ID 를 기반으로 Refresh Token 값 가져옴
+        RefreshToken refreshToken = refreshTokenRepository.findByEmail(authentication.getName());
+
+        // 4. Refresh Token 일치하는지 검사
+        if (!refreshToken.getEmail().equals(dto.getRefresh())) {
+            throw new RuntimeException("토큰의 유저 정보가 일치하지 않습니다.");
+        }
+        System.out.println("리이슈 마지막 부분2");
+        // 5. 새로운 토큰 생성
+
+        TokenDto tokenDto = TokenDto.builder()
+                .refresh(jwtTokenProvider.createRefreshToken(authentication.getName()))
+                .access(jwtTokenProvider.createAccessToken(authentication.getName()))
+                .build();
+
+        // 6. 저장소 정보 업데이트
+        RefreshToken newRefreshToken = refreshToken.update(refreshToken.getToken());
+        refreshTokenRepository.save(newRefreshToken);
+        System.out.println("리이슈 마지막 부분3");
+        // 토큰 발급
+        return tokenDto;
+    }
+
+
+
 
 }

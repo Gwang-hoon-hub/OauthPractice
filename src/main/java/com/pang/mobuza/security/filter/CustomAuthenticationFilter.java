@@ -36,28 +36,50 @@ public class CustomAuthenticationFilter extends GenericFilterBean {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
             throws IOException, ServletException {
         HttpServletRequest httpServletRequest = (HttpServletRequest) servletRequest;
-        String jwt = resolveToken(httpServletRequest);
-        System.out.println("토큰  :" + jwt);
+        String jwtAccess = resolveAccessToken(httpServletRequest);
+        String jwtRefresh = resolveRefreshToken(httpServletRequest);
         String requestURI = httpServletRequest.getRequestURI();
 
-        if (StringUtils.hasText(jwt) && jwtProvider.validateToken(jwt)) {
-            Authentication authentication = jwtProvider.getAuthentication(jwt);
-            SecurityContext context = SecurityContextHolder.createEmptyContext();
-            context.setAuthentication(authentication);
-            SecurityContextHolder.setContext(context);
 
-//            Authentication authentication = jwtProvider.getAuthentication(jwt);
-//            SecurityContextHolder.getContext().setAuthentication(authentication);
-            logger.debug("Security Context에 '{}' 인증 정보를 저장했습니다, uri: {}", authentication.getName(), requestURI);
-        } else {
-            logger.debug("유효한 JWT 토큰이 없습니다, uri: {}", requestURI);
+//        if (StringUtils.hasText(jwtAccess) && jwtProvider.validateToken(jwtAccess)) {
+//            Authentication authentication = jwtProvider.getAuthentication(jwtAccess);
+//            SecurityContext context = SecurityContextHolder.createEmptyContext();
+//            context.setAuthentication(authentication);
+//            SecurityContextHolder.setContext(context);
+//
+//            logger.debug("Security Context에 '{}' 인증 정보를 저장했습니다, uri: {}", authentication.getName(), requestURI);
+//        } else {
+//            logger.debug("유효한 JWT 토큰이 없습니다, uri: {}", requestURI);
+//        }
+
+        // ACCESS 토큰 먼저 검증
+        if(jwtAccess != null){
+            checkToken(jwtAccess);
+        } else if (jwtRefresh != null){
+            checkToken(jwtRefresh);
         }
         filterChain.doFilter(servletRequest, servletResponse);
     }
 
+    private void checkToken(String token) {
+        jwtProvider.validateToken(token);
+        Authentication authentication = jwtProvider.getAuthentication(token);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
     // 필터링을 하기 위해 토큰 정보를 가져오는 메소드
-    private String resolveToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader("authorization");
+    private String resolveAccessToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader("A-AUTH-TOKEN");
+        log.info("token : " + bearerToken);
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
+
+    // 필터링을 하기 위해 토큰 정보를 가져오는 메소드
+    private String resolveRefreshToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader("R-AUTH-TOKEN");
         log.info("token : " + bearerToken);
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);

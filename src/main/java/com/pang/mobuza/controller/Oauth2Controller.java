@@ -2,15 +2,16 @@ package com.pang.mobuza.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.pang.mobuza.dto.RequestMemberUpdateDto;
+import com.pang.mobuza.dto.RequestTokenDto;
+import com.pang.mobuza.dto.ResponseTokenDto;
+import com.pang.mobuza.dto.TokenDto;
 import com.pang.mobuza.security.userdetails.UserDetailsImpl;
-import com.pang.mobuza.security.userdetails.UserDetailsServiceImpl;
 import com.pang.mobuza.service.Oauth2MemberService;
 import com.pang.mobuza.util.CustomResponseEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -23,13 +24,14 @@ public class Oauth2Controller {
 
     @GetMapping("/user/kakao/callback")
     public ResponseEntity kakaoLogin(@RequestParam String code) throws JsonProcessingException {
-        String accessToken = memberService.kakaoLogin(code);
+        ResponseTokenDto dto = memberService.kakaoLogin(code);
 //        return new ResponseEntity("에서스토큰 갔니?", HttpStatus.OK);
         CustomResponseEntity response = CustomResponseEntity.builder()
-                .authorization(accessToken)
+                .authorization(null)
                 .code(HttpStatus.OK)
                 .message("어세스토큰 : authorization")
-                .data(null)
+                // data 안에 access, refresh  두개 다 담겨있다.
+                .data(dto)
                 .build();
         return response.responseAll();
     }
@@ -58,6 +60,11 @@ public class Oauth2Controller {
         String token = request.getHeader("authorization");
         System.out.println(token);
         return "홈화면";
+    }
+
+    @GetMapping("/api/reissue")
+    public ResponseEntity reissue(@RequestBody RequestTokenDto dto){
+        return ResponseEntity.ok().body(memberService.reissue(dto));
     }
 
 }

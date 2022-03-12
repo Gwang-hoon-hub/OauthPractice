@@ -32,6 +32,15 @@ public class Member {
     private HeroNames heroName;
 
     @Builder
+    public Member(String password, Long kakaoId, String nickname, String email, HeroNames heroName) {
+        this.password = password;
+        this.kakaoId = kakaoId;
+        this.nickname = nickname;
+        this.email = email;
+        this.heroName = heroName;
+    }
+
+    @Builder
     public Member(String password, Long kakaoId, String nickname, String email) {
         this.password = password;
         this.kakaoId = kakaoId;
@@ -39,11 +48,18 @@ public class Member {
         this.email = email;
     }
 
-    public void updateInfo(RequestMemberUpdateDto dto){
+    public Member updateInfo(RequestMemberUpdateDto dto){
         this.nickname = dto.getNickname();
         this.heroName = dto.getHeroName();
+        System.out.println("닉네임이 들어가는가 : " + this.nickname);
+        return Member.builder()
+                .password(this.getPassword())
+                .email(this.getEmail())
+                .nickname(this.getNickname())
+                .kakaoId(this.getKakaoId())
+                .heroName(this.getHeroName())
+                .build();
     }
-
 
     public Member fromDto(RequestRegisterDto dto, String password) {
         return new Member().builder()
@@ -52,4 +68,5 @@ public class Member {
                 .email(dto.getEmail())
                 .build();
     }
+
 }
