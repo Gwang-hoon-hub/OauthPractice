@@ -64,7 +64,18 @@ public class Oauth2Controller {
 
     @GetMapping("/api/reissue")
     public ResponseEntity reissue(@RequestBody RequestTokenDto dto){
-        return ResponseEntity.ok().body(memberService.reissue(dto));
+        TokenDto tokenDto = memberService.reissue(dto);
+        CustomResponseEntity response = CustomResponseEntity.builder()
+                .data(tokenDto)
+                .message("레디스 저장 성공")
+                .code(HttpStatus.OK)
+                .build();
+        return response.responseAll();
+    }
+
+    @GetMapping("/api/logout")
+    public ResponseEntity<?> logout(@RequestBody RequestTokenDto dto){
+        return memberService.logout(dto);
     }
 
 }

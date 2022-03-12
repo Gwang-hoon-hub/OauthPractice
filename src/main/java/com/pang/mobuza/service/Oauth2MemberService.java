@@ -12,17 +12,20 @@ import com.pang.mobuza.repository.RefreshTokenRepository;
 import com.pang.mobuza.security.filter.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.util.ObjectUtils;
 import org.springframework.web.client.RestTemplate;
 
 import javax.transaction.Transactional;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
 @Service
@@ -32,6 +35,7 @@ public class Oauth2MemberService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
     private final MemberRepository memberRepository;
+    private final RedisTemplate redisTemplate;
 
     @Transactional
     public ResponseTokenDto kakaoLogin(String code) throws JsonProcessingException {
@@ -40,19 +44,24 @@ public class Oauth2MemberService {
 
         // 2. 토큰으로 카카오 API 호출
         KakaoUserInfoDto kakaoUserInfoDto = getKakaoUserInfo(accessToken);
-        System.out.println("kakaoUserInfoDto = " + kakaoUserInfoDto.toString());
 
         RequestRegisterDto dto = RequestRegisterDto.builder()
                 .kakaoId(kakaoUserInfoDto.getKakaoId())
 //                .nickname(kakaoUserInfoDto.getNickname())
                 .email(kakaoUserInfoDto.getEmail())
                 .build();
+        // 회원가입, 로그인 처리
+        register(dto);
 
-        System.out.println(register(dto));
         // access, refresh 둘다 만들어줌
         String access = jwtTokenProvider.createAccessToken(kakaoUserInfoDto.getEmail());
         String refresh = jwtTokenProvider.createRefreshToken(kakaoUserInfoDto.getEmail());
         System.out.println(" 서비스단 토큰 발급 : " + access + "  ====  " + refresh);
+
+        // 4. RefreshToken Redis 저장 (expirationTime 설정을 통해 자동 삭제 처리)
+        redisTemplate.opsForValue()
+                .set("RT:" + kakaoUserInfoDto.getEmail(), refresh, jwtTokenProvider.getExpiration(refresh), TimeUnit.MILLISECONDS);
+
 
 //        Long exp = jwtTokenProvider.getExpiration(refresh);
         RefreshToken refreshToken = RefreshToken.builder()
@@ -163,40 +172,101 @@ public class Oauth2MemberService {
         return ResponseEntity.ok().body("캐릭터, 닉네임 설정 완료");
     }
 
+//    @Transactional
+//    public TokenDto reissue(RequestTokenDto dto) {
+//        // 1. Refresh Token 검증
+//        if (!jwtTokenProvider.validateToken(dto.getRefresh())) {
+//            throw new RuntimeException("Refresh Token 이 유효하지 않습니다.");
+//        }
+//        System.out.println("리이슈 마지막 부분1");
+//        // 2. Access Token 에서 Member ID 가져오기
+//        Authentication authentication = jwtTokenProvider.getAuthentication(dto.getAccess());
+//        System.out.println("authentication : "+authentication.getName());
+//        // 3. 저장소에서 Member ID 를 기반으로 Refresh Token 값 가져옴
+//        RefreshToken refreshToken = refreshTokenRepository.findByEmail(authentication.getName());
+//
+//        // 4. Refresh Token 일치하는지 검사
+//        if (!refreshToken.getToken().equals(dto.getRefresh())) {
+//            throw new RuntimeException("토큰의 유저 정보가 일치하지 않습니다.");
+//        }
+//        System.out.println("리이슈 마지막 부분2");
+//        // 5. 새로운 토큰 생성
+//
+//        TokenDto tokenDto = TokenDto.builder()
+//                .refresh(jwtTokenProvider.createRefreshToken(authentication.getName()))
+//                .access(jwtTokenProvider.createAccessToken(authentication.getName()))
+//                .build();
+//
+//        // 6. 저장소 정보 업데이트
+//        RefreshToken newRefreshToken = refreshToken.update(refreshToken.getToken());
+//        refreshTokenRepository.save(newRefreshToken);
+//        System.out.println("리이슈 마지막 부분3");
+//        // 토큰 발급
+//        return tokenDto;
+//    }
+
     @Transactional
     public TokenDto reissue(RequestTokenDto dto) {
         // 1. Refresh Token 검증
         if (!jwtTokenProvider.validateToken(dto.getRefresh())) {
             throw new RuntimeException("Refresh Token 이 유효하지 않습니다.");
         }
-        System.out.println("리이슈 마지막 부분1");
         // 2. Access Token 에서 Member ID 가져오기
         Authentication authentication = jwtTokenProvider.getAuthentication(dto.getAccess());
-        System.out.println(authentication.getName());
+        System.out.println("authentication : "+authentication.getName());
+
         // 3. 저장소에서 Member ID 를 기반으로 Refresh Token 값 가져옴
-        RefreshToken refreshToken = refreshTokenRepository.findByEmail(authentication.getName());
+        String refreshToken = (String)redisTemplate.opsForValue().get("RT:" + authentication.getName());
 
         // 4. Refresh Token 일치하는지 검사
-        if (!refreshToken.getEmail().equals(dto.getRefresh())) {
-            throw new RuntimeException("토큰의 유저 정보가 일치하지 않습니다.");
+        if(ObjectUtils.isEmpty(refreshToken)) {
+            throw new RuntimeException("잘못된 요청");
+//            return ResponseEntity.badRequest().body("잘못된 요청");
         }
-        System.out.println("리이슈 마지막 부분2");
-        // 5. 새로운 토큰 생성
+        if(!refreshToken.equals(dto.getRefresh())) {
+            throw new IllegalArgumentException("리프래쉬 일치하지 않음.");
+//            return ResponseEntity.badRequest().body("Refresh 정보가 일치 하지 않음.");
+        }
 
+        // 5. 새로운 토큰 생성
         TokenDto tokenDto = TokenDto.builder()
                 .refresh(jwtTokenProvider.createRefreshToken(authentication.getName()))
                 .access(jwtTokenProvider.createAccessToken(authentication.getName()))
                 .build();
 
+        // 3. Redis 에서 해당 User email 로 저장된 Refresh Token 이 있는지 여부를 확인 후 있을 경우 삭제합니다.
+//        if (redisTemplate.opsForValue().get("RT:" + authentication.getName()) != null) {
+//            // Refresh Token 삭제
+//            redisTemplate.delete("RT:" + authentication.getName());
+//        }
+
         // 6. 저장소 정보 업데이트
-        RefreshToken newRefreshToken = refreshToken.update(refreshToken.getToken());
-        refreshTokenRepository.save(newRefreshToken);
-        System.out.println("리이슈 마지막 부분3");
+        redisTemplate.opsForValue()
+                .set("RT:" + authentication.getName(), tokenDto.getRefresh(),
+                        jwtTokenProvider.getExpiration(tokenDto.getRefresh()), TimeUnit.MILLISECONDS);
         // 토큰 발급
         return tokenDto;
     }
+    // 로그아웃 처리
+    public ResponseEntity logout(RequestTokenDto dto) {
+        // 1. Access Token 검증
+        if (!jwtTokenProvider.validateToken(dto.getAccess())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("잘봇된요청");
+        }
+        // 2. Access Token 에서 User email 을 가져옵니다.
+        Authentication authentication = jwtTokenProvider.getAuthentication(dto.getAccess());
 
+        // 3. Redis 에서 해당 User email 로 저장된 Refresh Token 이 있는지 여부를 확인 후 있을 경우 삭제합니다.
+        if (redisTemplate.opsForValue().get("RT:" + authentication.getName()) != null) {
+            // Refresh Token 삭제
+            redisTemplate.delete("RT:" + authentication.getName());
+        }
 
+        // 4. 해당 Access Token 유효시간 가지고 와서 BlackList 로 저장하기
+        Long expiration = jwtTokenProvider.getExpiration(dto.getAccess());
+        redisTemplate.opsForValue()
+                .set(dto.getAccess(), "logout", expiration, TimeUnit.MILLISECONDS);
+        return ResponseEntity.ok().body("로그아웃 성공");
 
-
+    }
 }

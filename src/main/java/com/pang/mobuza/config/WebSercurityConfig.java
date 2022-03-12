@@ -2,8 +2,10 @@ package com.pang.mobuza.config;
 
 import com.pang.mobuza.security.filter.CustomAuthenticationFilter;
 import com.pang.mobuza.security.filter.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,14 +18,13 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
+@RequiredArgsConstructor
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class WebSercurityConfig extends WebSecurityConfigurerAdapter {
 
-    private JwtTokenProvider jwtProvider;
+    private final JwtTokenProvider jwtProvider;
+    private final RedisTemplate redisTemplate;
 
-    public WebSercurityConfig(JwtTokenProvider jwtProvider) {
-        this.jwtProvider = jwtProvider;
-    }
 
     @Override
     public void configure(WebSecurity web) throws Exception {
@@ -45,7 +46,7 @@ public class WebSercurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers(HttpMethod.GET, "/api/reissue").permitAll()
                 .anyRequest().authenticated();
 
-        http    .addFilterBefore(new CustomAuthenticationFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class);
+        http    .addFilterBefore(new CustomAuthenticationFilter(jwtProvider, redisTemplate), UsernamePasswordAuthenticationFilter.class);
     }
 
     @Bean

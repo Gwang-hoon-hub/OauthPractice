@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
@@ -18,7 +19,7 @@ import java.util.Date;
 @Component
 @Slf4j
 public class JwtTokenProvider {
-    private long accessTokenTime = 1000 * 60 * 1; // 2분
+    private long accessTokenTime = 1000 * 60 * 4; // 1분
     private long refreshTokenTime = 1000 * 60 * 8; // 4분
 
     @Autowired
@@ -58,10 +59,13 @@ public class JwtTokenProvider {
     }
 
     public Authentication getAuthentication(String token) {
+
+        Claims claims = parseClaims(token);
+
         UserDetails userDetails = null;
         try {
 //            userDetails = userDetailsService.loadUserByUsername(this.getUserInfo(token));
-            userDetails = userDetailsService.loadUserByUsername(this.getUserInfo(token));
+            userDetails = userDetailsService.loadUserByUsername(claims.getSubject());
         } catch (UsernameNotFoundException e) {
             throw new UsernameNotFoundException("해당 유저가 없습니다");
         }
@@ -107,20 +111,20 @@ public class JwtTokenProvider {
         }
     }
 
-//    private Claims parseClaims(String accessToken) {
-//        try {
-//            return Jwts.parser().setSigningKey(key).build().parseClaimsJws(accessToken).getBody();
-//        } catch (ExpiredJwtException e) {
-//            return e.getClaims();
-//        }
-//    }
+    private Claims parseClaims(String accessToken) {
+        try {
+            return Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(accessToken).getBody();
+        } catch (ExpiredJwtException e) {
+            return e.getClaims();
+        }
+    }
 
     // 유효성 검사
     public Long getExpiration(String accessToken) {
         // accessToken 남은 유효시간
 //        Date expiration = Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(accessToken).getBody().getExpiration();
-        System.out.println("만료시간 갖고오기");
-        Date expiration = Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJwt(accessToken).getBody().getExpiration();
+        System.out.println("만료시간 갖고오기 에러?");
+        Date expiration = Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(accessToken).getBody().getExpiration();
         log.info("만료시간 : " + expiration);
                 // 현재 시간
         Long now = new Date().getTime();
