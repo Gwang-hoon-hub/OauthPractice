@@ -1,5 +1,6 @@
 package com.pang.mobuza.security.filter;
 
+import com.pang.mobuza.exception.JwtExpiredException;
 import com.pang.mobuza.security.userdetails.UserDetailsServiceImpl;
 
 import io.jsonwebtoken.*;
@@ -11,6 +12,8 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Base64;
@@ -19,7 +22,7 @@ import java.util.Date;
 @Component
 @Slf4j
 public class JwtTokenProvider {
-    private long accessTokenTime = 1000 * 60 * 4; // 1분
+    private long accessTokenTime = 1000 * 30 * 1; // 30초
     private long refreshTokenTime = 1000 * 60 * 8; // 4분
 
     @Autowired
@@ -79,13 +82,23 @@ public class JwtTokenProvider {
         return sub;
     }
 
-    //request header에서 token값을 가지고온다
+    // 필터링을 하기 위해 토큰 정보를 가져오는 메소드
     public String resolveAccessToken(HttpServletRequest request) {
-        return request.getHeader("A-AUTH-TOKEN");
+        String bearerToken = request.getHeader("A-AUTH-TOKEN");
+        log.info("에세스----- : " + bearerToken);
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
     }
 
     public String resolveRefreshToken(HttpServletRequest request) {
-        return request.getHeader("R-AUTH-TOKEN");
+        String bearerToken = request.getHeader("R-AUTH-TOKEN");
+        log.info("리프래쉬---- : " + bearerToken);
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
     }
 
     //x토큰 의 유혀성 검증
@@ -104,8 +117,9 @@ public class JwtTokenProvider {
             throw new MalformedJwtException(" 문자열이 유효한 JWS가 아닌 경우");
         } catch (SignatureException e) {
             throw new SignatureException("JWS 서명 유효성 검사가 실패한 경우");
-        } catch (ExpiredJwtException e) {
-            throw new ExpiredJwtException(null, claims.getBody(), "만료된 토큰");
+        } catch (JwtExpiredException e) {
+            throw new JwtExpiredException(null, claims.getBody(), "만료된 토큰");
+//            log.info("엔트리 포인트가 잡아가는가");
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("문자열이 null이거나 비어 있거나 공백만 있는 경우");
         }

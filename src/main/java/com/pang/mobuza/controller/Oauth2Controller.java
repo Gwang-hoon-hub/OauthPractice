@@ -63,8 +63,8 @@ public class Oauth2Controller {
     }
 
     @GetMapping("/api/reissue")
-    public ResponseEntity reissue(@RequestBody RequestTokenDto dto){
-        TokenDto tokenDto = memberService.reissue(dto);
+    public ResponseEntity reissue(HttpServletRequest request){
+        TokenDto tokenDto = memberService.reissue(request);
         CustomResponseEntity response = CustomResponseEntity.builder()
                 .data(tokenDto)
                 .message("레디스 저장 성공")

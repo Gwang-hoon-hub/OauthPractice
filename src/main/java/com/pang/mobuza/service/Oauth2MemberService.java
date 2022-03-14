@@ -22,6 +22,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.client.RestTemplate;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
 import java.util.Optional;
 import java.util.UUID;
@@ -204,7 +205,15 @@ public class Oauth2MemberService {
 //    }
 
     @Transactional
-    public TokenDto reissue(RequestTokenDto dto) {
+    public TokenDto reissue(HttpServletRequest request) {
+        String access = jwtTokenProvider.resolveAccessToken(request);
+        String refresh = jwtTokenProvider.resolveRefreshToken(request);
+
+        RequestTokenDto dto = RequestTokenDto.builder()
+                .access(access)
+                .refresh(refresh)
+                .build();
+
         // 1. Refresh Token 검증
         if (!jwtTokenProvider.validateToken(dto.getRefresh())) {
             throw new RuntimeException("Refresh Token 이 유효하지 않습니다.");
