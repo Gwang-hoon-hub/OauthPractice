@@ -43,7 +43,7 @@ jobs:
           aws-region: ap-northeast-2
       
       - name: Upload to S3
-        run: aws s3 cp --region ap-northeast-2 ./$moabuza-prac-deploy.zip s3://$BUCKET_NAME/$PROJECT_NAME/$moabuza-prac-deploy.zip
+        run: aws s3 cp --region ap-northeast-2 ./$moabuza-prac-deploy.zip s3://$BUCKET_NAME/$moabuza-prac-deploy.zip
 
       - name: Code Deploy
-        run: aws deploy create-deployment --application-name $CODE_DEPLOY_APP_NAME --deployment-config-name CodeDeployDefault.OneAtATime --deployment-group-name $DEPLOYMENT_GROUP_NAME --s3-location bucket=$BUCKET_NAME,bundleType=zip,key=$PROJECT_NAME/$moabuza-prac-deploy.zip
+        run: aws deploy create-deployment --application-name $CODE_DEPLOY_APP_NAME --deployment-config-name CodeDeployDefault.OneAtATime --deployment-group-name $DEPLOYMENT_GROUP_NAME --s3-location bucket=$BUCKET_NAME,bundleType=zip,key=$moabuza-prac-deploy.zip
