@@ -9,7 +9,7 @@ env:
   PROJECT_NAME: moabuza
   BUCKET_NAME: moamoa-bucket
   CODE_DEPLOY_APP_NAME: moamoa
-  DEPLOYMENT_GROUP_NAME: moabuza-deploy-group
+  DEPLOYMENT_GROUP_NAME: moabuza
 
 jobs:
   build:
