@@ -50,6 +50,7 @@ public class WebSercurityConfig extends WebSecurityConfigurerAdapter {
 //                .antMatchers("/h2-console/*","favicon.ico").permitAll()
                 .antMatchers("/index.html").permitAll()
                 .antMatchers(HttpMethod.GET, "/api/reissue").permitAll()
+                .antMatchers(HttpMethod.GET, "/home").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .exceptionHandling()
