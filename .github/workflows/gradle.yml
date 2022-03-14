@@ -37,7 +37,7 @@ jobs:
       run: zip -r ./moabuza-prac-deploy.zip ./deploy
       
       
-    # Deploy
+    # Deploy 샵
     - name: Deploy
       uses: aws-actions/configure-aws-credentials@v1
       with:
