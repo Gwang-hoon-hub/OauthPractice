@@ -56,9 +56,7 @@ public class Oauth2Controller {
 
     @GetMapping("/home")
     public String rest(HttpServletRequest request){
-        System.out.println("여기는 도는가");
-        String token = request.getHeader("authorization");
-        System.out.println(token);
+        System.out.println("cicd 준비");
         return "홈화면";
     }
 
