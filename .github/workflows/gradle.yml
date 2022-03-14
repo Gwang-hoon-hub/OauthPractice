@@ -44,6 +44,6 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       run: |
           aws s3 cp \
-          --region ap-northeast-2 \
-          ./$moabuza-prac-deploy.zip s3://$moa-prac-bucket/$moabuza-prac-deploy.zip
+            --region ap-northeast-2 \
+            ./$moabuza-prac-deploy.zip s3://$moa-prac-bucket/$moabuza-prac-deploy.zip
     
