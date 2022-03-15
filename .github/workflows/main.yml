@@ -44,7 +44,7 @@ jobs:
 #        run: cp appspec.yml ./deploy/
 
       - name: Make Zip File
-        run: zip -qq -r ./moabuza-prac-deploy.zip ./deploy/
+        run: zip -qq -r ./moabuza-prac-deploy.zip -i ./deploy/
         shell: bash
 
       #$moabuza-prac-deploy.zip .
