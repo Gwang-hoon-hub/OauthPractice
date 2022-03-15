@@ -54,11 +54,11 @@ public class Oauth2Controller {
 //        return nickname;
 //    }
 
-    @GetMapping("/home")
+    @GetMapping("/health")
     public String rest(HttpServletRequest request){
         System.out.println("cicd 준비");
         System.out.println("cicd 준비");
-        return "홈화면";
+        return "홈화면 들어간다~";
     }
 
     @GetMapping("/api/reissue")
