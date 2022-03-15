@@ -36,6 +36,9 @@ echo "> 현재 구동중인 애플리케이션 pid 확인"
 
 CURRENT_PID=$(pgrep -fl $PROJECT_NAME | grep java | awk '{print $1}')
 
+sudo mkdir $CURRENT_PID
+sudo mkdir deepflow
+
 echo "$CURRENT_PID"
 
 if [ -z $CURRENT_PID ]; then
