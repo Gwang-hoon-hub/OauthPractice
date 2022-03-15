@@ -4,9 +4,13 @@ plugins {
     id 'java'
 }
 
+
 group = 'com.pang'
 version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '11'
+
+
+jar { enabled = false }
 
 configurations {
     compileOnly {
