@@ -14,7 +14,7 @@ on:
     branches: [ main ]
     
 env:
-  S3_BUCKET_NAME: moa-prac-bucket
+  S3_BUCKET_NAME: moamoa-bucket
 
 jobs:
   build:
