@@ -2,10 +2,6 @@
 
 REPOSITORY=/home/ubuntu/app
 PROJECT_NAME=mobuza
-
-cd $REPOSITORY
-mkdir deepflow
-
 echo "> Build 파일 복사"
 
 #cp ./build/libs/*.jar $REPOSITORY/
